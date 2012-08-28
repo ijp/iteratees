@@ -33,6 +33,8 @@
         heads
         take
         drop
+        skip-to-eof
+        length
 
         enum-eof
         enum-string
@@ -45,7 +47,7 @@
         make-divergent-condition
         divergent-condition?
         )
-(import (rnrs)
+(import (except (rnrs) length)
         (srfi :13)
         (srfi :8)
         (prefix (monad maybe) m:))
@@ -224,6 +226,26 @@
       ((eof)
        (values (make-done '()) stream))))
   (make-cont step))
+
+(define length
+  (letrec ((step (lambda (n)
+                   (lambda (stream)
+                     (stream-case stream
+                       ((chunk)
+                        (values (make-cont (step n)) stream))
+                       ((chunk s)
+                        (values (make-cont (step (+ n (string-length s))))
+                                empty-chunk))
+                       ((eof)
+                        (values (make-done n) stream)))))))
+    (make-cont (step 0))))
+
+(define skip-to-eof
+  (make-cont (lambda (stream)
+               (if (chunk? stream)
+                   (values skip-to-eof empty-chunk)
+                   (values (make-done '()) stream)))))
+
 
 ;; enumerators
 (define (enum-eof iter)
