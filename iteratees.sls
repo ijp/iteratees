@@ -39,6 +39,7 @@
         enum-eof
         enum-string
         enum-port
+        enum-file
         >>>
 
         run
@@ -271,6 +272,9 @@
                 (loop iter))))
         iter))
   loop)
+
+(define (enum-file file)
+  (enum-port (open-file-input-port file)))
 
 (define >>>
   (let ((join (lambda (g f)
