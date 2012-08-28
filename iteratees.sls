@@ -31,6 +31,8 @@
         head
         break
         heads
+        take
+        drop
 
         enum-eof
         enum-string
@@ -101,6 +103,10 @@
   ((cont-k i) v))
 
 (define buffer-size 1024)
+
+(define (string-split-at s n)
+  (values (string-take n s)
+          (string-drop n s)))
 
 ;; Iteratee Monad Instance
 
@@ -181,6 +187,43 @@
          (values (make-done count) stream)))))
   (loop 0 (string->list prefix)))
 
+(define (take n iter)
+  (define (step n k)
+    (lambda (stream)
+      (stream-case stream
+        ((chunk)
+         (contM (step n k)))
+        ((chunk s)
+         (if (< (string-length s) n)
+             (receive (i s) (k stream)
+               (values (take (- n (string-length s)) i)
+                       empty-chunk))
+             (let*-values (((s1 s2) (string-split-at n s))
+                           ((i s*) (k (make-chunk s1))))
+               (values (make-done i) (make-chunk s2)))))
+        ((eof)
+         (receive (i s) (k stream)
+           (values (make-done i) stream))))))
+  (cond ((and (zero? n) (cont? iter))
+         (return iter))
+        ((cont? iter)
+         (make-cont (step n (cont-k iter))))
+        (else
+         (>>= (drop n)
+              (lambda (_) (return iter))))))
+
+(define (drop n)
+  (define (step stream)
+    (stream-case stream
+      ((chunk)
+       (values (make-cont step) stream))
+      ((chunk s)
+       (if (>= (string-length s) n)
+           (values (make-done '()) (make-chunk (string-drop s n)))
+           (values (drop (- n (string-length s))) empty-chunk)))
+      ((eof)
+       (values (make-done '()) stream))))
+  (make-cont step))
 
 ;; enumerators
 (define (enum-eof iter)
