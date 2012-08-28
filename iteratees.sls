@@ -140,7 +140,7 @@
                      ((chunk) (values peek stream))
                      ((chunk s)
                       (values (make-done (m:just (string-ref s 0)))
-                              (string-drop s 1)))
+                              (make-chunk (string-drop s 1))))
                      ((eof)
                       (values (make-done (m:nothing)) stream))))))
     (make-cont step)))
