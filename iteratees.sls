@@ -35,6 +35,9 @@
         drop
         skip-to-eof
         length
+        drop-while
+        is-finished?
+        identity
 
         ->port
         ->file
@@ -251,6 +254,27 @@
                (if (chunk? stream)
                    (values skip-to-eof empty-chunk)
                    (values (make-done '()) stream)))))
+
+(define (drop-while pred?)
+  (define (step stream)
+    (stream-case stream
+      ((chunk)
+       (values (make-cont step) stream))
+      ((chunk s)
+       (let ((idx (string-index s (lambda (x) (not (pred? x))))))
+         (if idx
+             (values (make-done '()) (make-chunk (string-drop s idx)))
+             (values (make-cont step) empty-chunk))))
+      ((eof)
+       (values (make-done '()) stream))))
+  (make-cont step))
+
+(define is-finished?
+  (>>= peek
+       (lambda (x)
+         (return (m:nothing? x)))))
+
+(define identity (return '()))
 
 (define (->port p)
   (letrec ((step (lambda (stream)
