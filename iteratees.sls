@@ -36,6 +36,11 @@
         skip-to-eof
         length
 
+        ->port
+        ->file
+        ->string
+        ->output
+
         enum-eof
         enum-string
         enum-port
@@ -246,6 +251,42 @@
                (if (chunk? stream)
                    (values skip-to-eof empty-chunk)
                    (values (make-done '()) stream)))))
+
+(define (->port p)
+  (letrec ((step (lambda (stream)
+                   (if (chunk? stream)
+                       (begin
+                         (display (chunk-data stream) p)
+                         (values (make-cont step) (make-chunk "")))
+                       (begin
+                         (close-port p)
+                         (values (make-done '()) stream))))))
+    (make-cont step)))
+
+(define (->file file)
+  (->port (open-file-output-port file)))
+
+(define (->port* p)
+  ;; TODO: decide which of ->port and ->port* is best to export
+  (letrec ((step (lambda (stream)
+                   (if (chunk? stream)
+                       (begin
+                         (display (chunk-data stream) p)
+                         (values (make-cont step) (make-chunk "")))
+                       (begin
+                         (values (make-done '()) stream))))))
+    (make-cont step)))
+
+(define (->string)
+  (receive (p get) (open-string-output-port)
+    (>>= (->port* p)
+         (lambda (_)
+           (define result (get))
+           (close-output-port p)
+           (return result)))))
+
+(define (->output)
+  (->port* (current-output-port)))
 
 
 ;; enumerators
