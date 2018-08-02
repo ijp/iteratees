@@ -57,7 +57,7 @@
         divergent-condition?
         )
 (import (except (rnrs) length)
-        (srfi :13)
+        (only (srfi :13) string-index string-take string-drop string-null?)
         (srfi :8)
         (prefix (monad maybe) m:))
 
